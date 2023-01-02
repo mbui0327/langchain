@@ -129,21 +129,11 @@ body.appendChild(elem);
             script = f.read()
             await self.page.evaluate(script)
 
-        js_click_event = """
-window.removeEventListener("click", datajam_eventhandler);
-window.addEventListener("click", datajam_eventhandler);
-
-function datajam_eventhandler(event) {
-    if(event.type=="click" && event.metaKey){
-        //selector = generateSelector(event.target);
-        selector = UTILS.cssPath(event.target);
-        console.log({event: "select", target: selector});
-        // event.stopPropagation();
-        // event.preventDefault();
-    }  
-}
-"""
-        await self.page.evaluate(js_click_event)
+        css_path_file = os.path.join(dirname, "selection_handler.js")
+        with open(css_path_file, "r") as f:
+            script = f.read()
+            await self.page.evaluate(script)
+        
 
     async def click(self, id):
         # Inject javascript into the page which removes the target= attribute from all links

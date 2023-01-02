@@ -70,14 +70,28 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     function prefixedElementClassNames(node) {
         var classAttribute = node.getAttribute("class");
         if (!classAttribute) return [];
-
-        return classAttribute
-            .split(/\s+/g)
-            .filter(Boolean)
-            .map(function (name) {
-                // The prefix is required to store "__proto__" in a object-based map.
-                return "$" + name;
-            });
+        if (node.nodeName.toLowerCase() == "span") {
+            // console.log(
+            //     "classAttribute: ",
+            //     classAttribute,
+            //     classAttribute
+            //         .split(/\s+/g)
+            //         // .filter(Boolean)
+            //         .map(function (name) {
+            //             // The prefix is required to store "__proto__" in a object-based map.
+            //             return "$" + name;
+            //         })
+            // );
+        }
+        return (
+            classAttribute
+                .split(/\s+/g)
+                // .filter(Boolean)
+                .map(function (name) {
+                    // The prefix is required to store "__proto__" in a object-based map.
+                    return "$" + name;
+                })
+        );
     }
 
     /**
@@ -139,7 +153,8 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     }
 
     var prefixedOwnClassNamesArray = prefixedElementClassNames(node);
-    var needsClassNames = false;
+    // var needsClassNames = false;
+    var needsClassNames = true;
     var needsNthChild = false;
     var ownIndex = -1;
     var siblings = parent.children;
@@ -148,6 +163,15 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     //     console.log("Own class: ", prefixedOwnClassNamesArray);
     //     console.log("Sibbling: ", siblings);
     // }
+
+    // if (nodeName == "span") {
+    //     console.log(
+    //         "span bfore sibling process prefixedOwnClassNamesArray: ",
+    //         prefixedOwnClassNamesArray,
+    //         prefixedOwnClassNamesArray.length
+    //     );
+    // }
+
     for (var i = 0; (ownIndex === -1 || !needsNthChild) && i < siblings.length; ++i) {
         var sibling = siblings[i];
         if (sibling === node) {
@@ -158,7 +182,7 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
         if (sibling.nodeName.toLowerCase() !== nodeName.toLowerCase()) continue;
 
         needsClassNames = true;
-        var ownClassNames = prefixedOwnClassNamesArray;
+        var ownClassNames = prefixedOwnClassNamesArray.slice();
         var ownClassNameCount = prefixedOwnClassNamesArray.length;
 
         if (ownClassNameCount === 0) {
@@ -166,26 +190,27 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
             continue;
         }
         var siblingClassNamesArray = prefixedElementClassNames(sibling);
-        // if (nodeName == "li") {
+        // if (nodeName == "span") {
         //     console.log(
         //         "siblingClassNamesArray, ownClassNameCount: ",
         //         siblingClassNamesArray,
         //         ownClassNameCount
         //     );
         // }
-        for (var j = 0; j < siblingClassNamesArray.length; ++j) {            
+        for (var j = 0; j < siblingClassNamesArray.length; ++j) {
             var siblingClass = siblingClassNamesArray[j];
-            // if (nodeName == "li") {
+            // if (nodeName == "span") {
             //     console.log(
             //         "siblingClass inside for loop: ",
             //         siblingClass,
+            //         ownClassNames,
             //         ownClassNames.indexOf(siblingClass)
             //     );
             // }
             var classIndex = ownClassNames.indexOf(siblingClass);
-            if (classIndex==-1) continue;            
-            delete ownClassNames[classIndex];
-            // if (nodeName == "li") {
+            if (classIndex == -1) continue;
+            ownClassNames.splice(classIndex, 1);
+            // if (nodeName == "span") {
             //     console.log("ownClassNames after delete: ", ownClassNames, ownClassNameCount-1);
             // }
             if (!--ownClassNameCount) {
@@ -195,8 +220,13 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
         }
     }
 
-    // if (nodeName == "li") {
-    //     console.log("needsNthChild: ", needsNthChild);
+    // if (nodeName == "span") {
+    //     console.log(
+    //         "span after sibling process prefixedOwnClassNamesArray: ",
+    //         prefixedOwnClassNamesArray,
+    //         ownClassNameCount,
+    //         needsNthChild
+    //     );
     // }
 
     var result = nodeName.toLowerCase();
@@ -208,21 +238,30 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
         !node.getAttribute("class")
     )
         result += '[type="' + node.getAttribute("type") + '"]';
-    if (needsNthChild) {
-        result += ":nth-child(" + (ownIndex + 1) + ")";
-    } else if (needsClassNames) {
-        // for (var prefixedName in prefixedOwnClassNamesArray.keySet())
-        // console.log(prefixedOwnClassNamesArray);
+
+    if (needsClassNames) {
         for (var prefixedName in prefixedOwnClassNamesArray) {
             try {
-                // console.log(prefixedName);
-                result +=
-                    "." +
-                    escapeIdentifierIfNeeded(prefixedOwnClassNamesArray[prefixedName].substring(1));
+                // console.log(
+                //     prefixedName,
+                //     prefixedOwnClassNamesArray[prefixedName],
+                //     prefixedOwnClassNamesArray[prefixedName].substring(1),
+                //     escapeIdentifierIfNeeded(prefixedOwnClassNamesArray[prefixedName].substring(1))
+                // );
+                className = escapeIdentifierIfNeeded(
+                    prefixedOwnClassNamesArray[prefixedName].substring(1)
+                );
+                if (className != "") {
+                    result += "." + className;
+                }
             } catch (exception) {
                 // console.error(exception)
             }
         }
+    }
+
+    if (needsNthChild) {
+        result += ":nth-child(" + (ownIndex + 1) + ")";
     }
 
     return new UTILS.DOMNodePathStep(result, false);
