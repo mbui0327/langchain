@@ -3,67 +3,65 @@ Events = ["click", "mouseover", "keydown", "keyup", "mousemove"];
 Events.map((event) => window.removeEventListener(event, datajam_eventhandler));
 Events.map((event) => window.addEventListener(event, datajam_eventhandler));
 
-let elementSelecting = false;
-let selectionStarted = false;
-let multipleSelectionFirstTarget;
+let anchorSelectionFirstTarget;
 let mousePosition;
 let selectedArea;
+const SELECT_ANCHORS = "select_anchors";
+const ADD_ANCHORS = "add_anchors";
+const SELECT_LIST = "select_list";
+const ANCHOR_ADD_KEY = "KeyA";
+let anchorSelectionEvent;
 
 function datajam_eventhandler(event) {
-    if (event.type == "click" && event.metaKey) {
+    select_anchors(event);
+    select_list(event);
+    // console.log("Key map: ", keyMap);
+}
+
+function select_list(event) {
+    if (event.shiftKey && event.type == "click") {
         //selector = generateSelector(event.target);
         selector = UTILS.cssPath(event.target);
-        console.log({ event: "select", target: selector });
+        console.log({ event: SELECT_LIST, target: selector });
         event.stopPropagation();
         event.preventDefault();
-    } else if (event.type == "mouseover" && event.shiftKey) {
-        //selector = generateSelector(event.target);
-        selector = UTILS.cssPath(event.target);
-        console.log({ event: "select_list", target: selector });
-        event.stopPropagation();
-        event.preventDefault();
-    } else if (event.type == "keydown" && event.ctrlKey) {
+    }
+}
+
+function select_anchors(event) {
+    if (event.code == "ControlLeft" && event.type == "keydown") {
         selectedArea = {};
-        elementSelecting = true;
-        selectionStarted = false;
-        // console.log("selectingStarted");
-        event.stopPropagation();
-        event.preventDefault();
-    } else if (event.type == "keyup") {
-        if (elementSelecting && selectionStarted) {
+        anchorSelectionEvent = SELECT_ANCHORS;
+    } else if (["ControlLeft", ANCHOR_ADD_KEY].includes(event.code) && event.type == "keyup") {
+        if (anchorSelectionEvent && anchorSelectionFirstTarget) {
             selectedArea["end"] = mousePosition;
-            selectedBoundingBox = getBoudingBox(selectedArea);            
-            targetElement = getParentOfRect(multipleSelectionFirstTarget, selectedBoundingBox);
+            selectedBoundingBox = getBoudingBox(selectedArea);
+            targetElement = getParentOfRect(anchorSelectionFirstTarget, selectedBoundingBox);
             selector = UTILS.cssPath(targetElement);
-            // console.log("end position", mousePosition);
-            elementSelecting = false;
             console.log({
-                event: "select_multiple",
+                event: anchorSelectionEvent,
                 target: selector,
-                // boundingBox: selectedBoundingBox,
             });
-            event.stopPropagation();
-            event.preventDefault();
+            anchorSelectionEvent = null;
+            anchorSelectionFirstTarget = null;
         }
-    } else if (event.type == "mousemove" && event.ctrlKey) {
+    } else if (event.ctrlKey && event.type == "mousemove") {
         mousePosition = { x: event.clientX, y: event.clientY };
-        if (elementSelecting && !selectionStarted) {
-            selectedArea["start"] = mousePosition;            
-            multipleSelectionFirstTarget = event.target;
-            // console.log("start position", mousePosition);
-            selectionStarted = true;
-            event.stopPropagation();
-            event.preventDefault();
+        if (anchorSelectionEvent && !anchorSelectionFirstTarget) {
+            selectedArea["start"] = mousePosition;
+            anchorSelectionFirstTarget = event.target;
         }
+    } else if (event.code == ANCHOR_ADD_KEY && event.type == "keydown" && event.ctrlKey) {
+        anchorSelectionEvent = ADD_ANCHORS;
     }
 }
 
 function getBoudingBox(area) {
     let boundingBox = {};
-    
+
     boundingBox["left"] = Math.min(area["start"]["x"], area["end"]["x"]);
     boundingBox["right"] = Math.max(area["start"]["x"], area["end"]["x"]);
-    
+
     boundingBox["top"] = Math.min(area["start"]["y"], area["end"]["y"]);
     boundingBox["bottom"] = Math.max(area["start"]["y"], area["end"]["y"]);
 
@@ -73,7 +71,7 @@ function getBoudingBox(area) {
 function getParentOfRect(targetElement, rect) {
     elemRect = targetElement.getBoundingClientRect();
 
-    while (        
+    while (
         (elemRect["left"] > rect["left"] ||
             elemRect["right"] < rect["right"] ||
             elemRect["top"] > rect["top"] ||

@@ -35,8 +35,10 @@ UTILS.cssPath = function (node, optimized) {
     if (node.nodeType !== Node.ELEMENT_NODE) return "";
     var steps = [];
     var contextNode = node;
+    // console.log(node);
     while (contextNode) {
         var step = UTILS._cssPathStep(contextNode, !!optimized, contextNode === node);
+        // console.log(step);
         if (!step) break; // Error - bail out early.
         steps.push(step);
         if (step.optimized) break;
@@ -58,7 +60,8 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     }
     var nodeName = node.nodeName.toLowerCase();
 
-    if (id) return new UTILS.DOMNodePathStep(nodeName.toLowerCase() + idSelector(id), true);
+    // if (id) return new UTILS.DOMNodePathStep(nodeName.toLowerCase() + idSelector(id), true);
+    // if (id) return new UTILS.DOMNodePathStep(nodeName.toLowerCase() + idSelector(id), false);
     var parent = node.parentNode;
     if (!parent || parent.nodeType === Node.DOCUMENT_NODE)
         return new UTILS.DOMNodePathStep(nodeName.toLowerCase(), true);
@@ -70,7 +73,7 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     function prefixedElementClassNames(node) {
         var classAttribute = node.getAttribute("class");
         if (!classAttribute) return [];
-        if (node.nodeName.toLowerCase() == "span") {
+        // if (node.nodeName.toLowerCase() == "span") {
             // console.log(
             //     "classAttribute: ",
             //     classAttribute,
@@ -82,7 +85,7 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
             //             return "$" + name;
             //         })
             // );
-        }
+        // }
         return (
             classAttribute
                 .split(/\s+/g)
@@ -230,6 +233,9 @@ UTILS._cssPathStep = function (node, optimized, isTargetNode) {
     // }
 
     var result = nodeName.toLowerCase();
+    
+    if (id) result += idSelector(id);
+
     if (
         isTargetNode &&
         nodeName.toLowerCase() === "input" &&
