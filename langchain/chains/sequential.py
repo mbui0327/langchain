@@ -5,7 +5,7 @@ from typing import Dict, List
 from pydantic import BaseModel, Extra, root_validator
 
 from langchain.chains.base import Chain
-from langchain.input import get_color_mapping, print_text
+from langchain.input import get_color_mapping
 
 
 class SequentialChain(Chain, BaseModel):
@@ -47,7 +47,10 @@ class SequentialChain(Chain, BaseModel):
         for chain in chains:
             missing_vars = set(chain.input_keys).difference(known_variables)
             if missing_vars:
-                raise ValueError(f"Missing required input keys: {missing_vars}")
+                raise ValueError(
+                    f"Missing required input keys: {missing_vars}, "
+                    f"only had {known_variables}"
+                )
             overlapping_keys = known_variables.intersection(chain.output_keys)
             if overlapping_keys:
                 raise ValueError(
@@ -133,5 +136,7 @@ class SimpleSequentialChain(Chain, BaseModel):
             if self.strip_outputs:
                 _input = _input.strip()
             if self.verbose:
-                print_text(_input, color=color_mapping[str(i)], end="\n")
+                self.callback_manager.on_text(
+                    _input, color=color_mapping[str(i)], end="\n"
+                )
         return {self.output_key: _input}

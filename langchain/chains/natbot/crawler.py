@@ -13,7 +13,7 @@ black_listed_elements = {
     "script",
     "style",
     "path",
-    "svg",
+    # "svg",
     "br",
     "::marker",
 }
@@ -195,8 +195,8 @@ body.appendChild(elem);
         page_state_as_text = []
 
         device_pixel_ratio = await page.evaluate("window.devicePixelRatio")
-        if platform == "darwin" and device_pixel_ratio == 1:  # lies
-            device_pixel_ratio = 2
+        # if platform == "darwin" and device_pixel_ratio == 1:  # lies
+        #     device_pixel_ratio = 2
 
         win_scroll_x = await page.evaluate("window.scrollX")
         win_scroll_y = await page.evaluate("window.scrollY")
@@ -268,7 +268,7 @@ body.appendChild(elem);
         cursor = 0
         html_elements_text = []
 
-        child_nodes = {}
+        clickable_ancestor_child_nodes = {}
         elements_in_view_port = []
 
         anchor_ancestry = {"-1": (False, None)}
@@ -382,18 +382,19 @@ body.appendChild(elem);
 
             meta_data = []
 
-            # inefficient to grab the same set of keys for kinds of objects but its fine for now
+            # inefficient to grab the same set of keys for kinds of objects, but it's fine for now
             element_attributes = find_attributes(
                 attributes[index], ["type", "placeholder", "aria-label", "title", "alt", "class"]
             )
 
-            if not is_ancestor_clickable:
+            if is_ancestor_clickable:
+                clickable_ancestor_node_id = str(clickable_id)
+                clickable_ancestor_node = clickable_ancestor_child_nodes.setdefault(
+                    clickable_ancestor_node_id, [])                
+            else:
                 clickable_ancestor_node_id = None
                 clickable_ancestor_node = None
-            else:
-                clickable_ancestor_node_id = str(clickable_id)
-                clickable_ancestor_node = child_nodes.setdefault(
-                    clickable_ancestor_node_id, [])
+                
 
             if node_name == "#text" and is_ancestor_clickable:
                 text = strings[node_value[index]]
@@ -462,7 +463,7 @@ body.appendChild(elem);
         elements_of_interest = []
         id_counter = 0
 
-        for element in elements_in_view_port:
+        for element in elements_in_view_port:            
             node_index = element.get("node_index")
             parent_index = element.get("parent_index")
             node_name = element.get("node_name")
@@ -476,18 +477,17 @@ body.appendChild(elem);
             meta_data = element.get("node_meta")
 
             inner_text = f"{node_value} " if node_value else ""
-            meta = ""
+            meta = ""            
+            # if node_index in clickable_ancestor_child_nodes:
+            #     for child in clickable_ancestor_child_nodes.get(node_index):
+            #         entry_type = child.get("type")
+            #         entry_value = child.get("value")
 
-            if node_index in child_nodes:
-                for child in child_nodes.get(node_index):
-                    entry_type = child.get("type")
-                    entry_value = child.get("value")
-
-                    if entry_type == "attribute":
-                        entry_key = child.get("key")
-                        meta_data.append(f'{entry_key}="{entry_value}"')
-                    else:
-                        inner_text += f"{entry_value} "
+            #         if entry_type == "attribute":
+            #             entry_key = child.get("key")
+            #             meta_data.append(f'{entry_key}="{entry_value}"')
+            #         else:
+            #             inner_text += f"({entry_type}){entry_value} "
 
             if meta_data:
                 meta_string = " ".join(meta_data)
@@ -498,41 +498,21 @@ body.appendChild(elem);
 
             converted_node_name = convert_name(node_name, is_clickable)
 
-            # not very elegant, more like a placeholder
-            # if (
-            #     (converted_node_name != "button" or meta == "")
-            #     and converted_node_name not in ["link", "input", "img", "textarea", "table", "div", "span", "h2", "h1", "h3"]
-            # ) and inner_text.strip() == "":
-            #     continue
+            # print("name=%s, index=%s, text=%s, meta=%s, parent=%s, last=%s" % (node_name, node_index, inner_text.strip(), meta, parent_index,
+            #     node_in_progress[-1]["node_index"] if len(node_in_progress) > 0 else None ))
 
-            # page_element_buffer[id_counter] = element
             page_element_buffer[int(node_index)] = element
-            new_line = "\n"
-            tab = "\t"
             ## close out if the current node's parent is not the last one in the queue #
             if len(node_in_progress) > 0:
                 while len(node_in_progress) > 0 and node_in_progress[-1]["node_index"] != parent_index:
-                    # elements_of_interest.append(f"""{new_line}""")
                     elements_of_interest.append(
                         node_in_progress[-1]["element_end_string"])
                     node_in_progress.pop()
 
-            if inner_text != "":
-                elements_of_interest.append(
-                    # f"""{new_line}{' '*len(node_in_progress)}<{converted_node_name} id={id_counter}{meta}>{new_line}{' '*len(node_in_progress)}{inner_text}"""
-                    # f"""<{converted_node_name} id={id_counter}{meta}>{inner_text}"""
-                    f"""<{converted_node_name} id="{node_index}" {meta}>{inner_text}"""
-                )
-            else:
-                elements_of_interest.append(
-                    # f"""{new_line}{' '*len(node_in_progress)}<{converted_node_name} id={id_counter}{meta}>"""
-                    # f"""<{converted_node_name} id={id_counter}{meta}>"""
-                    f"""<{converted_node_name} id="{node_index}" {meta}>"""
-                )
+            elements_of_interest.append(f"""<{converted_node_name} id="{node_index}" {meta}>{inner_text}""")
+
             node_in_progress.append(
-                # {"node_index": node_index, "element_end_string": f"""{' '*len(node_in_progress)}</{converted_node_name} id={id_counter}>"""})
                 {"node_index": node_index, "element_end_string": f"""</{converted_node_name}>"""})
-            # id_counter += 1
 
         print("Parsing time: {:0.2f} seconds".format(time.time() - start))
         return elements_of_interest

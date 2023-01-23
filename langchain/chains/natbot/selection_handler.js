@@ -9,26 +9,31 @@ let selectedArea;
 const SELECT_ANCHORS = "select_anchors";
 const ADD_ANCHORS = "add_anchors";
 const SELECT_LIST = "select_list";
+const REMOVE_SELECTIONS = "remove_selections";
 const ANCHOR_ADD_KEY = "KeyA";
+const SELECTION_REMOVE_KEY = "KeyD";
 let anchorSelectionEvent;
 
 function datajam_eventhandler(event) {
-    select_anchors(event);
-    select_list(event);
+    select_main_instance_elements(event);
+    select_other_instances(event);
     // console.log("Key map: ", keyMap);
 }
 
-function select_list(event) {
-    if (event.shiftKey && event.type == "click") {
-        //selector = generateSelector(event.target);
+function select_other_instances(event) {
+    // if (event.shiftKey && event.type == "click") {
+    //     //selector = generateSelector(event.target);
+    //     selector = UTILS.cssPath(event.target);
+    //     console.log({ event: SELECT_LIST, target: selector });
+    // }
+
+    if (event.shiftKey && event.type == "mousemove") {
         selector = UTILS.cssPath(event.target);
         console.log({ event: SELECT_LIST, target: selector });
-        event.stopPropagation();
-        event.preventDefault();
     }
 }
 
-function select_anchors(event) {
+function select_main_instance_elements(event) {
     if (event.code == "ControlLeft" && event.type == "keydown") {
         selectedArea = {};
         anchorSelectionEvent = SELECT_ANCHORS;
@@ -53,6 +58,11 @@ function select_anchors(event) {
         }
     } else if (event.code == ANCHOR_ADD_KEY && event.type == "keydown" && event.ctrlKey) {
         anchorSelectionEvent = ADD_ANCHORS;
+    } else if (event.code == SELECTION_REMOVE_KEY && event.type == "keydown" && event.ctrlKey) {
+        console.log({
+            event: REMOVE_SELECTIONS,
+            target: null
+        });
     }
 }
 

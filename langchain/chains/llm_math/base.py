@@ -6,8 +6,8 @@ from pydantic import BaseModel, Extra
 from langchain.chains.base import Chain
 from langchain.chains.llm import LLMChain
 from langchain.chains.llm_math.prompt import PROMPT
-from langchain.input import print_text
-from langchain.llms.base import LLM
+from langchain.llms.base import BaseLLM
+from langchain.prompts.base import BasePromptTemplate
 from langchain.python import PythonREPL
 
 
@@ -21,8 +21,10 @@ class LLMMathChain(Chain, BaseModel):
             llm_math = LLMMathChain(llm=OpenAI())
     """
 
-    llm: LLM
+    llm: BaseLLM
     """LLM wrapper to use."""
+    prompt: BasePromptTemplate = PROMPT
+    """Prompt to use to translate to python if neccessary."""
     input_key: str = "question"  #: :meta private:
     output_key: str = "answer"  #: :meta private:
 
@@ -49,20 +51,20 @@ class LLMMathChain(Chain, BaseModel):
         return [self.output_key]
 
     def _call(self, inputs: Dict[str, str]) -> Dict[str, str]:
-        llm_executor = LLMChain(prompt=PROMPT, llm=self.llm)
+        llm_executor = LLMChain(prompt=self.prompt, llm=self.llm)
         python_executor = PythonREPL()
         if self.verbose:
-            print_text(inputs[self.input_key])
+            self.callback_manager.on_text(inputs[self.input_key])
         t = llm_executor.predict(question=inputs[self.input_key], stop=["```output"])
         if self.verbose:
-            print_text(t, color="green")
+            self.callback_manager.on_text(t, color="green")
         t = t.strip()
         if t.startswith("```python"):
             code = t[9:-4]
             output = python_executor.run(code)
             if self.verbose:
-                print_text("\nAnswer: ")
-                print_text(output, color="yellow")
+                self.callback_manager.on_text("\nAnswer: ")
+                self.callback_manager.on_text(output, color="yellow")
             answer = "Answer: " + output
         elif t.startswith("Answer:"):
             answer = t

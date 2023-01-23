@@ -1,4 +1,5 @@
 .vscode/
+.idea/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -106,6 +107,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venvs
 env/
 venv/
 ENV/
@@ -129,3 +131,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# macOS display setting files
+.DS_Store

@@ -6,7 +6,7 @@ import os
 import sys
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Extra, root_validator
+from pydantic import BaseModel, Extra, Field, root_validator
 
 from langchain.utils import get_from_dict_or_env
 
@@ -25,6 +25,15 @@ class HiddenPrints:
         sys.stdout = self._original_stdout
 
 
+def _get_default_params() -> dict:
+    return {
+        "engine": "google",
+        "google_domain": "google.com",
+        "gl": "us",
+        "hl": "en",
+    }
+
+
 class SerpAPIWrapper(BaseModel):
     """Wrapper around SerpAPI.
 
@@ -40,7 +49,7 @@ class SerpAPIWrapper(BaseModel):
     """
 
     search_engine: Any  #: :meta private:
-
+    params: dict = Field(default_factory=_get_default_params)
     serpapi_api_key: Optional[str] = None
 
     class Config:
@@ -68,14 +77,11 @@ class SerpAPIWrapper(BaseModel):
 
     def run(self, query: str) -> str:
         """Run query through SerpAPI and parse result."""
-        params = {
+        _params = {
             "api_key": self.serpapi_api_key,
-            "engine": "google",
             "q": query,
-            "google_domain": "google.com",
-            "gl": "us",
-            "hl": "en",
         }
+        params = {**self.params, **_params}
         with HiddenPrints():
             search = self.search_engine(params)
             res = search.get_dict()
@@ -90,8 +96,19 @@ class SerpAPIWrapper(BaseModel):
             and "snippet_highlighted_words" in res["answer_box"].keys()
         ):
             toret = res["answer_box"]["snippet_highlighted_words"][0]
+        elif (
+            "sports_results" in res.keys()
+            and "game_spotlight" in res["sports_results"].keys()
+        ):
+            toret = res["sports_results"]["game_spotlight"]
+        elif (
+            "knowledge_graph" in res.keys()
+            and "description" in res["knowledge_graph"].keys()
+        ):
+            toret = res["knowledge_graph"]["description"]
         elif "snippet" in res["organic_results"][0].keys():
             toret = res["organic_results"][0]["snippet"]
+
         else:
             toret = "No good search result found"
         return toret

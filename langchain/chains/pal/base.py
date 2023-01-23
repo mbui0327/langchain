@@ -12,8 +12,7 @@ from langchain.chains.base import Chain
 from langchain.chains.llm import LLMChain
 from langchain.chains.pal.colored_object_prompt import COLORED_OBJECT_PROMPT
 from langchain.chains.pal.math_prompt import MATH_PROMPT
-from langchain.input import print_text
-from langchain.llms.base import LLM
+from langchain.llms.base import BaseLLM
 from langchain.prompts.base import BasePromptTemplate
 from langchain.python import PythonREPL
 
@@ -21,7 +20,7 @@ from langchain.python import PythonREPL
 class PALChain(Chain, BaseModel):
     """Implements Program-Aided Language Models."""
 
-    llm: LLM
+    llm: BaseLLM
     prompt: BasePromptTemplate
     stop: str = "\n\n"
     get_answer_expr: str = "print(solution())"
@@ -53,13 +52,13 @@ class PALChain(Chain, BaseModel):
         llm_chain = LLMChain(llm=self.llm, prompt=self.prompt)
         code = llm_chain.predict(stop=[self.stop], **inputs)
         if self.verbose:
-            print_text(code, color="green", end="\n")
+            self.callback_manager.on_text(code, color="green", end="\n")
         repl = PythonREPL()
         res = repl.run(code + f"\n{self.get_answer_expr}")
         return {self.output_key: res.strip()}
 
     @classmethod
-    def from_math_prompt(cls, llm: LLM, **kwargs: Any) -> PALChain:
+    def from_math_prompt(cls, llm: BaseLLM, **kwargs: Any) -> PALChain:
         """Load PAL from math prompt."""
         return cls(
             llm=llm,
@@ -70,7 +69,7 @@ class PALChain(Chain, BaseModel):
         )
 
     @classmethod
-    def from_colored_object_prompt(cls, llm: LLM, **kwargs: Any) -> PALChain:
+    def from_colored_object_prompt(cls, llm: BaseLLM, **kwargs: Any) -> PALChain:
         """Load PAL from colored object prompt."""
         return cls(
             llm=llm,
