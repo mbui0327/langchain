@@ -52,12 +52,10 @@ class LLMBashChain(Chain, BaseModel):
     def _call(self, inputs: Dict[str, str]) -> Dict[str, str]:
         llm_executor = LLMChain(prompt=self.prompt, llm=self.llm)
         bash_executor = BashProcess()
-        if self.verbose:
-            self.callback_manager.on_text(inputs[self.input_key])
+        self.callback_manager.on_text(inputs[self.input_key], verbose=self.verbose)
 
         t = llm_executor.predict(question=inputs[self.input_key])
-        if self.verbose:
-            self.callback_manager.on_text(t, color="green")
+        self.callback_manager.on_text(t, color="green", verbose=self.verbose)
 
         t = t.strip()
         if t.startswith("```bash"):
@@ -69,10 +67,13 @@ class LLMBashChain(Chain, BaseModel):
             command_list = [s for s in command_list[1:-1]]
             output = bash_executor.run(command_list)
 
-            if self.verbose:
-                self.callback_manager.on_text("\nAnswer: ")
-                self.callback_manager.on_text(output, color="yellow")
+            self.callback_manager.on_text("\nAnswer: ", verbose=self.verbose)
+            self.callback_manager.on_text(output, color="yellow", verbose=self.verbose)
 
         else:
             raise ValueError(f"unknown format from LLM: {t}")
         return {self.output_key: output}
+
+    @property
+    def _chain_type(self) -> str:
+        return "llm_bash_chain"

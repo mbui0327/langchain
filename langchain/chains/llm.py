@@ -7,6 +7,7 @@ from langchain.chains.base import Chain
 from langchain.input import get_colored_text
 from langchain.llms.base import BaseLLM
 from langchain.prompts.base import BasePromptTemplate
+from langchain.prompts.prompt import PromptTemplate
 from langchain.schema import LLMResult
 
 
@@ -61,10 +62,9 @@ class LLMChain(Chain, BaseModel):
         for inputs in input_list:
             selected_inputs = {k: inputs[k] for k in self.prompt.input_variables}
             prompt = self.prompt.format(**selected_inputs)
-            if self.verbose:
-                _colored_text = get_colored_text(prompt, "green")
-                _text = "Prompt after formatting:\n" + _colored_text
-                self.callback_manager.on_text(_text, end="\n")
+            _colored_text = get_colored_text(prompt, "green")
+            _text = "Prompt after formatting:\n" + _colored_text
+            self.callback_manager.on_text(_text, end="\n", verbose=self.verbose)
             if "stop" in inputs and inputs["stop"] != stop:
                 raise ValueError(
                     "If `stop` is present in any inputs, should be present in all."
@@ -123,3 +123,13 @@ class LLMChain(Chain, BaseModel):
             return new_result
         else:
             return result
+
+    @property
+    def _chain_type(self) -> str:
+        return "llm_chain"
+
+    @classmethod
+    def from_string(cls, llm: BaseLLM, template: str) -> Chain:
+        """Create LLMChain from LLM and template."""
+        prompt_template = PromptTemplate.from_template(template)
+        return cls(llm=llm, prompt=prompt_template)
